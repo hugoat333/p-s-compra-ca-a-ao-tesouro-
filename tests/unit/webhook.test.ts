@@ -1,0 +1,148 @@
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { POST } from "@/app/api/webhooks/checkout/route";
+import { setOrderRepositoryForTests } from "@/lib/db";
+import type { OrderRepository } from "@/lib/db/types";
+import { PRODUCT_ID, SECRET, paidPayload, repoFactories, setTestEnv, webhookRequest } from "./helpers";
+
+for (const factory of repoFactories()) {
+  describe(`webhook do checkout (${factory.name})`, () => {
+    let repo: OrderRepository;
+
+    beforeEach(async () => {
+      setTestEnv();
+      repo = await factory.create();
+      setOrderRepositoryForTests(repo);
+    });
+    afterAll(async () => {
+      setOrderRepositoryForTests(undefined);
+      await factory.close();
+    });
+
+    const tokenOf = async (paymentId: string) => {
+      const found = await repo.findPaidForEmail("ana@example.com", PRODUCT_ID);
+      return found?.paymentId === paymentId ? found : null;
+    };
+
+    it("1. pix.paid cria pedido aprovado", async () => {
+      const res = await POST(webhookRequest(paidPayload({ event: "pix.paid", paymentId: "pix_1" })));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ ok: true, action: "created" });
+      const order = await tokenOf("pix_1");
+      expect(order).toMatchObject({
+        paymentId: "pix_1",
+        productId: PRODUCT_ID,
+        paymentStatus: "paid",
+        customerEmail: "ana@example.com",
+        customerName: "Ana Souza",
+        personalizationStatus: "pending",
+        deliveryStatus: "pending",
+        childName: null,
+        theme: null,
+      });
+      expect(order!.downloadToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(order!.paidAt).toBeInstanceOf(Date);
+    });
+
+    it("2. card.paid cria pedido aprovado", async () => {
+      const res = await POST(webhookRequest(paidPayload({ event: "card.paid", paymentId: "card_1" })));
+      expect(res.status).toBe(200);
+      expect((await tokenOf("card_1"))?.paymentStatus).toBe("paid");
+    });
+
+    it("3. evento duplicado não cria segundo pedido nem troca o token", async () => {
+      await POST(webhookRequest(paidPayload({ paymentId: "dup_1" })));
+      const first = await tokenOf("dup_1");
+      const res = await POST(webhookRequest(paidPayload({ paymentId: "dup_1" })));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ ok: true, action: "updated" });
+      const second = await tokenOf("dup_1");
+      expect(second!.id).toBe(first!.id);
+      expect(second!.downloadToken).toBe(first!.downloadToken);
+      // Mesmo pedido concorrente: ainda um único registro.
+      await Promise.all([1, 2, 3].map(() => POST(webhookRequest(paidPayload({ paymentId: "dup_2" })))));
+      const r1 = await repo.upsertPayment({
+        paymentId: "dup_2", productId: PRODUCT_ID, customerName: null, customerEmail: null,
+        paymentStatus: "paid", amount: null, paidAt: null, newToken: "x".repeat(43),
+      });
+      expect(r1.inserted).toBe(false);
+    });
+
+    it("4. pending não libera produto", async () => {
+      const res = await POST(webhookRequest(paidPayload({ status: "pending", paymentId: "pend_1" })));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ action: "ignored" });
+      expect(await tokenOf("pend_1")).toBeNull();
+    });
+
+    it("5. failed não libera produto", async () => {
+      const res = await POST(webhookRequest(paidPayload({ event: "card.paid", status: "failed", paymentId: "fail_1" })));
+      expect(await res.json()).toMatchObject({ action: "ignored" });
+      expect(await tokenOf("fail_1")).toBeNull();
+    });
+
+    it("6. refunded altera status (sem apagar) e reenvio atrasado de paid não reativa", async () => {
+      await POST(webhookRequest(paidPayload({ paymentId: "ref_1" })));
+      const before = await tokenOf("ref_1");
+      const res = await POST(webhookRequest(paidPayload({ event: "pix.refunded", status: "refunded", paymentId: "ref_1" })));
+      expect(res.status).toBe(200);
+      const after = await repo.findByToken(before!.downloadToken);
+      expect(after).toMatchObject({ id: before!.id, paymentStatus: "refunded" });
+      expect(after!.refundedAt).toBeInstanceOf(Date);
+
+      await POST(webhookRequest(paidPayload({ event: "pix.paid", paymentId: "ref_1" })));
+      expect((await repo.findByToken(before!.downloadToken))!.paymentStatus).toBe("refunded");
+
+      await POST(webhookRequest(paidPayload({ paymentId: "cb_1", event: "card.paid" })));
+      const cb = await tokenOf("cb_1");
+      await POST(webhookRequest(paidPayload({ event: "card.chargeback", status: "charged_back", paymentId: "cb_1" })));
+      expect((await repo.findByToken(cb!.downloadToken))!.paymentStatus).toBe("charged_back");
+    });
+
+    it("card.refunded também é tratado", async () => {
+      await POST(webhookRequest(paidPayload({ event: "card.paid", paymentId: "ref_2" })));
+      const o = await tokenOf("ref_2");
+      await POST(webhookRequest(paidPayload({ event: "card.refunded", status: "refunded", paymentId: "ref_2" })));
+      expect((await repo.findByToken(o!.downloadToken))!.paymentStatus).toBe("refunded");
+    });
+
+    it("7. secret incorreto retorna 401 (Bearer e x-secret)", async () => {
+      expect((await POST(webhookRequest(paidPayload(), { authorization: "Bearer errado" }))).status).toBe(401);
+      expect((await POST(webhookRequest(paidPayload(), { "x-secret": "errado" }))).status).toBe(401);
+      expect((await POST(webhookRequest(paidPayload(), {}))).status).toBe(401);
+      expect(await tokenOf("pay_001")).toBeNull();
+      // x-secret correto é aceito
+      expect((await POST(webhookRequest(paidPayload({ paymentId: "xs_1" }), { "x-secret": SECRET }))).status).toBe(200);
+    });
+
+    it("8. product.id incorreto não libera produto", async () => {
+      const res = await POST(webhookRequest(paidPayload({ productId: "outro_produto", paymentId: "other_1" })));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ action: "ignored" });
+      expect(await repo.findPaidForEmail("ana@example.com", "outro_produto")).toBeNull();
+      expect(await tokenOf("other_1")).toBeNull();
+    });
+
+    it("product.type é validado quando CHECKOUT_PRODUCT_TYPE está definido", async () => {
+      process.env.CHECKOUT_PRODUCT_TYPE = "main";
+      const p = paidPayload({ paymentId: "type_1" });
+      p.product.type = "order_bump";
+      expect(await (await POST(webhookRequest(p))).json()).toMatchObject({ action: "ignored" });
+      expect(await tokenOf("type_1")).toBeNull();
+    });
+
+    it("payload inválido retorna 400", async () => {
+      expect((await POST(webhookRequest("{nao é json"))).status).toBe(400);
+      expect((await POST(webhookRequest({ event: "pix.paid" }))).status).toBe(400);
+      expect((await POST(webhookRequest({ event: "pix.paid", payment: { status: "paid" }, product: { id: PRODUCT_ID } }))).status).toBe(400);
+    });
+
+    it("não armazena documento, IP nem código PIX", async () => {
+      await POST(webhookRequest(paidPayload({ paymentId: "priv_1" })));
+      const o = await tokenOf("priv_1");
+      const serialized = JSON.stringify(o);
+      expect(serialized).not.toContain("123.456.789-00");
+      expect(serialized).not.toContain("200.1.2.3");
+      expect(serialized).not.toContain("SEGREDO");
+    });
+  });
+}
