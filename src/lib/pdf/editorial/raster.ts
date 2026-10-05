@@ -62,7 +62,13 @@ export class RasterBook {
     slot: string,
     crop: Crop,
     box: Box,
-    o: { shape?: "rect" | "circle"; radius?: number; align?: "center" | "top" | "bottom" } = {},
+    o: {
+      shape?: "rect" | "circle";
+      radius?: number;
+      align?: "center" | "top" | "bottom";
+      /** Recorte personalizado (ex.: máscara orgânica). Deve abrir um clip; fechado com popGraphicsState. */
+      clip?: (page: PDFPage, placed: Box) => void;
+    } = {},
   ): Box {
     const img = this.images.get(crop.file);
     if (!img) throw new Error(`arte não carregada: ${crop.file}`);
@@ -82,7 +88,8 @@ export class RasterBook {
     this.uses.push({ page: pageIndex, slot, file: crop.file, crop: { x: crop.x, y: crop.y, w: crop.w, h: crop.h }, widthMm: w, heightMm: h, dpi });
 
     const placed = { x, y, w, h };
-    beginClip(page, placed, o.shape ?? "rect", o.radius ?? 2);
+    if (o.clip) o.clip(page, placed);
+    else beginClip(page, placed, o.shape ?? "rect", o.radius ?? 2);
     const ptPerPx = mm(w) / crop.w;
     const pageH = page.getHeight();
     page.drawImage(img, {
