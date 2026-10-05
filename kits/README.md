@@ -21,7 +21,13 @@ npm run kits:thumbs     # gera public/temas/<tema>.webp (cards leves da página)
 npm run pdf:sample -- dinossauros "Miguel"   # gera output/… para conferência visual
 ```
 
-Posição do nome: ajuste `LAYOUT_OVERRIDES` em `src/lib/kits/manifest.ts` (coordenadas relativas 0–1 da arte).
+Posição do nome: definida em `LAYOUT_OVERRIDES` (`src/lib/kits/manifest.ts`). Com as artes atuais o nome vai numa
+faixa acima da arte ("Olá, {nome}!" na introdução, "Parabéns, {nome}!" no certificado), porque nenhum certificado tem
+área livre — sobrepor cobriria texto, medalha ou o quadro de data/assinatura.
+
+Resolução: `npm run kits:check` mostra o DPI efetivo de impressão. As artes entregues em out/2026 têm ~300–750 px
+de largura (46–123 DPI no papel). Para impressão nítida, substitua pelos originais em alta (ideal 300 DPI:
+introdução/certificado ~2250x3000 px, pistas ~1050x1550 px) mantendo os mesmos nomes de arquivo — nada no código muda.
 
 Tamanho: o deploy serverless da Vercel tem limite de ~250 MB por função. Use 150–200 DPI (pistas ~1200×1700 px)
 e PNG otimizado ou JPEG de qualidade 90. 60 arquivos de 1–2 MB cabem com folga.

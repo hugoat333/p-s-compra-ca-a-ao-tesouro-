@@ -122,12 +122,19 @@ for (const factory of repoFactories()) {
       expect(await tokenOf("other_1")).toBeNull();
     });
 
-    it("product.type é validado quando CHECKOUT_PRODUCT_TYPE está definido", async () => {
-      process.env.CHECKOUT_PRODUCT_TYPE = "main";
+    it("product.type diferente de \"main\" (padrão ggCheckout) não libera", async () => {
       const p = paidPayload({ paymentId: "type_1" });
       p.product.type = "order_bump";
       expect(await (await POST(webhookRequest(p))).json()).toMatchObject({ action: "ignored" });
       expect(await tokenOf("type_1")).toBeNull();
+    });
+
+    it("aceita o produto principal dentro de products[] (estrutura oficial)", async () => {
+      const p = paidPayload({ paymentId: "arr_1" }) as Record<string, unknown>;
+      delete p.product;
+      p.products = [{ id: "bump_x", type: "order_bump" }, { id: PRODUCT_ID, type: "main" }];
+      expect(await (await POST(webhookRequest(p))).json()).toMatchObject({ action: "created" });
+      expect((await tokenOf("arr_1"))?.paymentStatus).toBe("paid");
     });
 
     it("payload inválido retorna 400", async () => {

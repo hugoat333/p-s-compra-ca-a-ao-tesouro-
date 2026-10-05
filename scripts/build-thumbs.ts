@@ -24,7 +24,7 @@ async function main() {
       continue;
     }
     const out = path.join(outDir, `${theme}.webp`);
-    await sharp(source).resize(600, 450, { fit: "cover", position: "attention" }).webp({ quality: 78 }).toFile(out);
+    await sharp(source).resize(600, 450, { fit: "cover", position: "top" }).webp({ quality: 78 }).toFile(out);
     console.log(`✓ ${theme}: ${path.relative(process.cwd(), out)} (${Math.round(fs.statSync(out).size / 1024)} KB)`);
   }
 }

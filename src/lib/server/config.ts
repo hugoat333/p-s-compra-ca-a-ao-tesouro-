@@ -22,7 +22,7 @@ export interface AppConfig {
   appUrl: string;
   databaseUrl?: string;
   checkoutProductId?: string;
-  checkoutProductType?: string;
+  checkoutProductType: string;
   checkoutWebhookSecret?: string;
   email?: EmailConfig;
   kitsDir: string;
@@ -48,7 +48,8 @@ export function loadConfig(): AppConfig {
     appUrl: (env("APP_URL") ?? "http://localhost:3000").replace(/\/+$/, ""),
     databaseUrl: env("DATABASE_URL"),
     checkoutProductId: env("CHECKOUT_PRODUCT_ID"),
-    checkoutProductType: env("CHECKOUT_PRODUCT_TYPE"),
+    // ggCheckout: o produto principal chega com product.type = "main".
+    checkoutProductType: env("CHECKOUT_PRODUCT_TYPE") ?? "main",
     checkoutWebhookSecret: env("CHECKOUT_WEBHOOK_SECRET"),
     email,
     kitsDir: path.resolve(env("KITS_DIR") ?? path.join(process.cwd(), "kits")),

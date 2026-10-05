@@ -1,18 +1,15 @@
 /**
- * Normalização do payload do webhook do checkout.
+ * Normalização do payload do webhook da ggCheckout (estrutura oficial documentada):
  *
- * CONTRATO DOCUMENTADO (fornecido pelo dono do produto):
- *   eventos: pix.paid | card.paid | pix.refunded | card.refunded
- *   payment.status: paid | pending | failed | refunded | charged_back
- *   campos usados: payment.id, payment.status, product.id, product.type
+ *   event                 pix.paid | card.paid | pix.refunded | card.refunded
+ *   customer.name, customer.email
+ *   payment.id            identificador único da transação (chave de idempotência)
+ *   payment.status        paid | pending | failed | refunded | charged_back
+ *   payment.amount        guardado como recebido
+ *   product.id, product.type   produto principal usa type = "main"
+ *   products[]            itens do pedido (ex.: order bumps) — procuramos o nosso ID também aqui
  *
- * SUPOSIÇÕES (confirmar com um payload real do provedor — ver README):
- *   - nome do evento em `event` (aceitamos também `type`);
- *   - dados podem vir na raiz ou dentro de `data`;
- *   - comprador em `customer` (aceitamos `buyer`), com `name` e `email`;
- *   - valor em `payment.amount` (aceitamos `payment.value`), guardado como recebido;
- *   - pode haver `products` (array) em vez de `product` — procuramos o nosso ID nele.
- * Qualquer outro campo (documento, IP, código PIX, banco) é ignorado e nunca armazenado.
+ * Qualquer outro campo (documento, IP, código PIX, dados bancários) é ignorado e nunca armazenado.
  */
 import { normalizeEmail } from "../email";
 
@@ -53,12 +50,6 @@ function num(v: unknown): number | null {
   return null;
 }
 
-function date(v: unknown): Date | null {
-  if (typeof v !== "string" && typeof v !== "number") return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function product(v: unknown): NormalizedProduct | null {
   if (!isObj(v)) return null;
   const id = str(v.id);
@@ -67,9 +58,9 @@ function product(v: unknown): NormalizedProduct | null {
 
 export function normalizeWebhook(body: unknown): NormalizedWebhook {
   if (!isObj(body)) throw new PayloadError("body não é um objeto");
-  const root = isObj(body.data) && isObj(body.data.payment) ? body.data : body;
+  const root = body;
 
-  const event = str(body.event) ?? str(body.type) ?? str(root.event) ?? str(root.type);
+  const event = str(root.event);
   if (!event) throw new PayloadError("evento ausente");
 
   const payment = root.payment;
@@ -90,7 +81,7 @@ export function normalizeWebhook(body: unknown): NormalizedWebhook {
   }
   if (products.length === 0) throw new PayloadError("product.id ausente");
 
-  const customer = isObj(root.customer) ? root.customer : isObj(root.buyer) ? root.buyer : {};
+  const customer = isObj(root.customer) ? root.customer : {};
   const name = str(customer.name);
 
   return {
@@ -100,7 +91,8 @@ export function normalizeWebhook(body: unknown): NormalizedWebhook {
     products,
     customerName: name ? name.slice(0, 200) : null,
     customerEmail: normalizeEmail(customer.email),
-    amount: num(payment.amount) ?? num(payment.value),
-    paidAt: date(payment.paid_at) ?? date(payment.paidAt) ?? date(payment.approved_at),
+    amount: num(payment.amount),
+    // A documentação não define data de pagamento: usamos o recebimento do webhook.
+    paidAt: null,
   };
 }

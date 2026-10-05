@@ -51,9 +51,22 @@ export const DEFAULT_LAYOUT: KitLayout = {
   },
 };
 
+/**
+ * Calibrado com as artes definitivas (out/2026): nenhum certificado tem área livre para o nome —
+ * todo espaço vazio já tem texto, medalha/troféu ou o quadro de data/assinatura. Por isso o nome vai numa
+ * faixa de pergaminho ACIMA da arte, e a frase emenda no texto impresso logo abaixo:
+ *   "Parabéns, Miguel!"  →  "Você concluiu a Missão do Cristal Lunar e se tornou um verdadeiro astronauta!"
+ * Introdução: padrão (faixa "Olá, {nome}!" acima do título da missão).
+ */
+const CERTIFICATE_BANNER: NamePlacement = { mode: "banner", template: "Parabéns, {nome}!" };
+
 export const LAYOUT_OVERRIDES: Partial<Record<ThemeId, Partial<KitLayout>>> = {
-  // Exemplo (após conferir a arte):
-  // dinossauros: { certificate: { mode: "overlay", template: "{nome}", slot: { x: 0.2, y: 0.5, w: 0.6, h: 0.1 }, label: false } },
+  dinossauros: { certificate: CERTIFICATE_BANNER },
+  espaco: { certificate: CERTIFICATE_BANNER },
+  futebol: { certificate: CERTIFICATE_BANNER },
+  princesas: { certificate: CERTIFICATE_BANNER },
+  fadas: { certificate: CERTIFICATE_BANNER },
+  sereias: { certificate: CERTIFICATE_BANNER },
 };
 
 export function layoutFor(theme: ThemeId): KitLayout {

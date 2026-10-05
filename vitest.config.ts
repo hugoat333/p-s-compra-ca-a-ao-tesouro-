@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.ts"],
+    // Os arquivos compartilham o mesmo banco de teste (TRUNCATE entre testes): rodar em série.
+    fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,
   },

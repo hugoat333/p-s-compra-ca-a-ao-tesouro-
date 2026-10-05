@@ -9,16 +9,20 @@
  */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, PDFName, PDFBool, PDFRawStream, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { THEMES, type ThemeId } from "../themes";
 import { layoutFor, resolveKit, type NamePlacement, type KitFiles } from "../kits/manifest";
 import { fitText } from "./text";
 
-const A4: [number, number] = [595.28, 841.89];
+export const A4: [number, number] = [595.28, 841.89];
 const A4_LANDSCAPE: [number, number] = [841.89, 595.28];
-const MARGIN = 28; // ~10 mm: seguro para impressoras domésticas
-const GUTTER = 16;
+export const MARGIN = 28; // ~10 mm: seguro para impressoras domésticas
+export const GUTTER = 16;
+
+/** Faixa do nome: altura e caixa de texto (largura útil = página - 2*MARGIN - 40). */
+export const BANNER_HEIGHT = 96;
+export const BANNER_TEXT = { maxSize: 44, minSize: 18 };
 
 const NAVY = rgb(0.12, 0.23, 0.48);
 const GOLD = rgb(0.85, 0.55, 0.13);
@@ -56,7 +60,13 @@ function isPng(b: Uint8Array) {
 }
 
 async function embedImage(doc: PDFDocument, bytes: Uint8Array): Promise<PDFImage> {
-  return isPng(bytes) ? doc.embedPng(bytes) : doc.embedJpg(bytes);
+  const img = isPng(bytes) ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+  // Pede ao leitor/impressora para suavizar a ampliação de artes de baixa resolução.
+  // Não altera os pixels da arte.
+  await img.embed();
+  const stream = doc.context.lookup(img.ref);
+  if (stream instanceof PDFRawStream) stream.dict.set(PDFName.of("Interpolate"), PDFBool.True);
+  return img;
 }
 
 /** Encaixa preservando proporção, centralizado. */
@@ -114,7 +124,7 @@ function drawPersonalizedPage(doc: PDFDocument, img: PDFImage, placement: NamePl
   const text = personalizedText(placement.template, childName);
 
   if (placement.mode === "banner") {
-    const bannerH = 96;
+    const bannerH = BANNER_HEIGHT;
     const banner: Rect = { x: MARGIN, y: ph - MARGIN - bannerH, width: pw - 2 * MARGIN, height: bannerH };
     drawParchment(page, banner);
     drawCenteredText(
@@ -122,7 +132,7 @@ function drawPersonalizedPage(doc: PDFDocument, img: PDFImage, placement: NamePl
       fonts.display,
       text,
       { x: banner.x + 20, y: banner.y + 10, width: banner.width - 40, height: banner.height - 20 },
-      { maxSize: 44, minSize: 18 },
+      BANNER_TEXT,
     );
     const area: Rect = { x: MARGIN, y: MARGIN, width: pw - 2 * MARGIN, height: ph - 2 * MARGIN - bannerH - 14 };
     const r = fit(img, area);

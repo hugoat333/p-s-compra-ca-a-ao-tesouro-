@@ -33,7 +33,7 @@ Checkout aprovado ──► POST /api/webhooks/checkout  (registra o pedido, ide
 ## Regras implementadas
 
 - Só `pix.paid`/`card.paid` **com** `payment.status === "paid"` e `product.id === CHECKOUT_PRODUCT_ID` liberam o produto
-  (`CHECKOUT_PRODUCT_TYPE` opcional filtra `product.type`). `pending`/`failed`/outros produtos: 200 e ignorados.
+  e `product.type === "main"`. `pending`/`failed`/outros produtos: 200 e ignorados.
 - `payment_id` UNIQUE; reenvios atualizam o mesmo registro. Um `paid` atrasado nunca reativa um pedido `refunded`/`charged_back`.
 - Reembolso/chargeback: status muda, `refunded_at` é registrado, nada é apagado; download/acesso bloqueados.
 - Não armazena CPF, IP, código PIX nem dados bancários. Logs JSON sem secrets; e-mails mascarados.
@@ -42,11 +42,12 @@ Checkout aprovado ──► POST /api/webhooks/checkout  (registra o pedido, ide
 - Falha na geração: personalização preservada, `delivery_status = failed`, botão "TENTAR NOVAMENTE".
 - `delivery_status`: `generated` (PDF gerado) → `delivered` (e-mail enviado ou primeiro download).
 
-## Suposições sobre o payload (CONFIRMAR com um evento real)
+## Payload da ggCheckout
 
-Ver `src/lib/checkout/payload.ts`. Aceitamos o evento em `event` ou `type`, dados na raiz ou em `data`,
-comprador em `customer`/`buyer` (`name`, `email`), valor em `payment.amount`/`payment.value` e `product` ou `products[]`.
-Se o provedor usar outros nomes, o ajuste é só nesse arquivo. Os logs `webhook.invalid_payload` mostram o motivo.
+Estrutura oficial tratada em `src/lib/checkout/payload.ts`: `event`, `customer.name`, `customer.email`, `payment.id`,
+`payment.status`, `payment.amount`, `product.id`, `product.type` e `products[]`. O produto principal usa
+`product.type = "main"` (padrão de `CHECKOUT_PRODUCT_TYPE`). Payloads fora desse formato retornam 400 e geram o log
+`webhook.invalid_payload`. A unidade de `payment.amount` é guardada como recebida.
 
 ## Operação / consultas úteis
 
