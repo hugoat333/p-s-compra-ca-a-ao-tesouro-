@@ -15,7 +15,8 @@ export async function writeFixtureKits(dir: string): Promise<string> {
     fs.mkdirSync(tdir, { recursive: true });
     const files: [string, number, number][] = [
       ["introducao", 620, 877],
-      ...CLUE_BASENAMES.map((b) => [b, 400, 560] as [string, number, number]),
+      // Grandes o bastante para os recortes editoriais (ex.: pista-08 de Dinossauros vai até x=430).
+      ...CLUE_BASENAMES.map((b) => [b, 450, 600] as [string, number, number]),
       ["certificado", 877, 620],
     ];
     for (const [base, w, h] of files) {

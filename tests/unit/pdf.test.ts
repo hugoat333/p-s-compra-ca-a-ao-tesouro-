@@ -34,7 +34,7 @@ describe("gerador do PDF", () => {
   it("17-21. introdução + 8 pistas + certificado, nome na introdução e no certificado", async () => {
     const read: string[] = [];
     const { bytes } = await generateAdventurePdf({
-      theme: "dinossauros",
+      theme: "sereias", // layout legado (Dinossauros usa o editorial; ver editorial.test.ts)
       childName: "Miguel",
       kitsDir,
       fontsDir: FONTS_DIR,
@@ -49,7 +49,7 @@ describe("gerador do PDF", () => {
     expect(doc.getTitle()).toBe("O Tesouro de Miguel");
 
     // Só arquivos do tema escolhido foram lidos: introdução, 8 pistas e certificado.
-    const dinoDir = path.join(kitsDir, "dinossauros");
+    const dinoDir = path.join(kitsDir, "sereias");
     expect(read).toHaveLength(10);
     expect(read.every((p) => p.startsWith(dinoDir + path.sep))).toBe(true);
     expect(read.map((p) => path.basename(p)).sort()).toEqual(

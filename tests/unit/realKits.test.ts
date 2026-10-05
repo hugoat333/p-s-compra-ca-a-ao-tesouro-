@@ -7,6 +7,7 @@ import { PDFDocument, PDFName, PDFDict, PDFRawStream, PDFRef } from "pdf-lib";
 import { THEME_IDS } from "@/lib/themes";
 import { kitsReport, resolveKit } from "@/lib/kits/manifest";
 import { generateAdventurePdf } from "@/lib/pdf/generate";
+import { editorialKit } from "@/lib/editorial";
 import { FONTS_DIR } from "./helpers";
 
 const KITS = path.join(__dirname, "..", "..", "kits");
@@ -30,8 +31,8 @@ describe("kits definitivos", () => {
     expect(seen.size).toBe(60);
   });
 
-  it("o PDF de cada tema embute exatamente as 10 artes daquele tema", async () => {
-    for (const theme of THEME_IDS) {
+  it("o PDF de cada tema legado embute exatamente as 10 artes daquele tema", async () => {
+    for (const theme of THEME_IDS.filter((t) => !editorialKit(t))) {
       const kit = resolveKit(theme, KITS);
       const read: string[] = [];
       const { bytes } = await generateAdventurePdf({

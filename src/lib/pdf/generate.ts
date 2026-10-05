@@ -14,6 +14,9 @@ import fontkit from "@pdf-lib/fontkit";
 import { THEMES, type ThemeId } from "../themes";
 import { layoutFor, resolveKit, type NamePlacement, type KitFiles } from "../kits/manifest";
 import { fitText } from "./text";
+import { editorialKit } from "../editorial";
+import { buildEditorialPdf } from "./editorial/generate";
+import type { RasterUse } from "./editorial/raster";
 
 export const A4: [number, number] = [595.28, 841.89];
 const A4_LANDSCAPE: [number, number] = [841.89, 595.28];
@@ -41,6 +44,8 @@ export interface GenerateOptions {
 export interface GeneratedPdf {
   bytes: Uint8Array;
   kit: KitFiles;
+  /** Composição editorial: cada ilustração raster usada, com DPI efetivo no tamanho impresso. */
+  rasters?: RasterUse[];
 }
 
 interface Fonts {
@@ -204,6 +209,14 @@ function drawCluesPage(doc: PDFDocument, imgs: PDFImage[], firstNumber: number, 
 export async function generateAdventurePdf(opts: GenerateOptions): Promise<GeneratedPdf> {
   const read = opts.readFile ?? ((p: string) => fs.readFile(p));
   const kit = resolveKit(opts.theme, opts.kitsDir);
+
+  const editorial = editorialKit(opts.theme);
+  if (editorial) {
+    const { doc, rasters } = await buildEditorialPdf({ kit: editorial, kitDir: kit.dir, fontsDir: opts.fontsDir, childName: opts.childName, read });
+    setMetadata(doc, opts);
+    return { bytes: await doc.save({ useObjectStreams: true }), kit, rasters };
+  }
+
   const layout = layoutFor(opts.theme);
 
   const doc = await PDFDocument.create();
@@ -230,6 +243,13 @@ export async function generateAdventurePdf(opts: GenerateOptions): Promise<Gener
   drawCluesPage(doc, clues.slice(4, 8), 5, fonts);
   drawPersonalizedPage(doc, cert, layout.certificate, opts.childName, fonts);
 
+  setMetadata(doc, opts);
+
+  const bytes = await doc.save({ useObjectStreams: true });
+  return { bytes, kit };
+}
+
+function setMetadata(doc: PDFDocument, opts: GenerateOptions) {
   const title = `O Tesouro de ${opts.childName}`;
   doc.setTitle(title);
   doc.setSubject(`Aventura ${THEMES[opts.theme].label} — O Tesouro do Dia das Crianças`);
@@ -237,7 +257,4 @@ export async function generateAdventurePdf(opts: GenerateOptions): Promise<Gener
   doc.setCreator("O Tesouro do Dia das Crianças");
   doc.setProducer("O Tesouro do Dia das Crianças");
   doc.setLanguage("pt-BR");
-
-  const bytes = await doc.save({ useObjectStreams: true });
-  return { bytes, kit };
 }

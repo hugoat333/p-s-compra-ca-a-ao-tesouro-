@@ -8,7 +8,7 @@ import { FONTS_DIR } from "./helpers";
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑáàâãäéèêëíìîïóòôõöúùûüçñ' -.!,";
 
 describe("fontes do PDF", () => {
-  for (const file of ["Baloo2-ExtraBold.ttf", "Nunito-Bold.ttf"]) {
+  for (const file of ["Baloo2-ExtraBold.ttf", "Nunito-Bold.ttf", "Nunito-SemiBold.ttf"]) {
     it(`${file} cobre todos os caracteres do nome`, () => {
       const font = fontkit.create(fs.readFileSync(path.join(FONTS_DIR, file)));
       const missing = [...CHARS].filter((ch) => font.glyphForCodePoint(ch.codePointAt(0)!).id === 0 && ch !== " ");
