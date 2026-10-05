@@ -32,10 +32,11 @@ introdução/certificado ~2250x3000 px, pistas ~1050x1550 px) mantendo os mesmos
 Tamanho: o deploy serverless da Vercel tem limite de ~250 MB por função. Use 150–200 DPI (pistas ~1200×1700 px)
 e PNG otimizado ou JPEG de qualidade 90. 60 arquivos de 1–2 MB cabem com folga.
 
-## Composição editorial (vetor-first) — Dinossauros (prova de conceito)
+## Composição editorial "expedição jurássica" — Dinossauros (aprovada)
 
-O tema `dinossauros` não usa mais as artes como página/card inteiro. O PDF desenha em vetor o pergaminho, as
-molduras, as placas, o selo `PISTA X DE 8`, a medalha e toda a tipografia; as artes entram só como ilustrações
-recortadas (`src/lib/editorial/dinossauros.ts`), **nunca maiores que 150 DPI efetivos** no papel.
+O tema `dinossauros` é montado pelo PDF: selva, pergaminho com textura, placas, selos, bússola, trilhas, pedras, ovos,
+medalha e toda a tipografia em vetor (`src/lib/pdf/editorial/jurassic.ts`). As artes entram só como ilustrações
+recortadas e integradas por máscara orgânica, **nunca maiores que 150 DPI efetivos** no papel
+(recortes em `src/lib/editorial/dinossauros.ts`). Cada pista tem composição própria; a pista 8 tem tratamento final.
 `npm run kits:check` mede cada ilustração no tamanho impresso (erro abaixo de 120 DPI, aviso entre 120 e 150).
-Os demais temas seguem no layout legado até serem migrados para o mesmo sistema.
+Os demais temas seguem no layout legado até serem produzidos no mesmo padrão.

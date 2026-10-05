@@ -32,6 +32,21 @@ describe.each(editorialThemes)("kit editorial: %s", (theme) => {
     expect(kit.clues).toHaveLength(8);
   });
 
+  if (theme === "dinossauros") {
+    it("desafios batem exatamente com o roteiro original das artes", async () => {
+      // Roteiro das artes originais (kits/dinossauros/pista-0N.png).
+      const roteiro = [null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO FINAL"];
+      expect(kit.clues.map((c) => c.challenge?.label ?? null)).toEqual(roteiro);
+      const { bytes } = await generateAdventurePdf({ theme, childName: "Miguel", kitsDir: KITS, fontsDir: FONTS_DIR });
+      const t = await pageTexts(bytes);
+      const count = (s: string, needle: string) => s.split(needle).length - 1;
+      expect(count(t[1], "DESAFIO EM DUPLA")).toBe(2); // pistas 2 e 4
+      expect(count(t[1], "DESAFIO FINAL")).toBe(0);
+      expect(count(t[2], "DESAFIO EM DUPLA")).toBe(1); // pista 6
+      expect(count(t[2], "DESAFIO FINAL")).toBe(1); // pista 8
+    }, 60_000);
+  }
+
   for (const name of ["Ana", "Miguel", "Maria Eduarda", "João Pedro"]) {
     it(`PDF com "${name}": 4 páginas, texto vetorial, nome só na introdução e no certificado`, async () => {
       const read: string[] = [];

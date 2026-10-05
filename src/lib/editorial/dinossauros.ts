@@ -1,7 +1,7 @@
 /**
  * Dinossauros — textos transcritos das artes originais (out/2026), sem alteração de conteúdo.
  * Única correção: "seem limpinhas" → "saem limpinhas" (erro de digitação na arte da pista 2).
- * Recortes conferidos visualmente: nenhum inclui texto rasterizado.
+ * Recortes: maior área de ilustração SEM texto rasterizado de cada arte (conferidos visualmente).
  */
 import type { EditorialKit } from "./types";
 
@@ -52,40 +52,40 @@ export const dinossauros: EditorialKit = {
     {
       title: "Encontramos as primeiras pegadas!",
       body: "Um dinossauro faminto passou por aqui. A próxima pista está no lugar onde os alimentos ficam bem fresquinhos.",
-      art: { file: "pista-01", x: 4, y: 240, w: 297, h: 165 },
+      art: { file: "pista-01", x: 0, y: 236, w: 305, h: 172 },
     },
     {
       title: "Cuidado, exploradores!",
       body: "As pegadas estão cobertas de lama. Procure o lugar onde as roupas entram sujas e saem limpinhas.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Caminhem juntos por 5 passos como um T-Rex!" },
-      art: { file: "pista-02", x: 5, y: 198, w: 285, h: 106 },
+      art: { file: "pista-02", x: 0, y: 196, w: 295, h: 110 },
     },
     {
       title: "O caminho ficou silencioso...",
       body: "Parece que o dinossauro resolveu descansar. A próxima pista está no lugar onde você dorme e recupera suas energias.",
-      art: { file: "pista-03", x: 0, y: 250, w: 282, h: 155 },
+      art: { file: "pista-03", x: 0, y: 248, w: 282, h: 162 },
     },
     {
       title: "O ovo está cada vez mais perto!",
       body: "Um enorme dinossauro passou pelo lugar onde a família costuma sentar para descansar.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Inventem juntos o rugido secreto da equipe!" },
-      art: { file: "pista-04", x: 4, y: 206, w: 282, h: 118 },
+      art: { file: "pista-04", x: 0, y: 204, w: 290, h: 124 },
     },
     {
       title: "Encontramos uma pista estranha...",
       body: "Para continuar, procure um lugar onde você consegue ver um explorador exatamente igual a você.",
-      art: { file: "pista-05", x: 6, y: 212, w: 352, h: 122 },
+      art: { file: "pista-05", x: 0, y: 208, w: 365, h: 128 },
     },
     {
       title: "Pegadas de dinossauro!",
       body: "Agora procure onde ficam guardados os pares que você coloca nos pés para sair de casa.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Comparem suas pegadas e descubram quem tem o maior pé!" },
-      art: { file: "pista-06", x: 2, y: 178, w: 168, h: 152 },
+      art: { file: "pista-06", x: 0, y: 176, w: 172, h: 160 },
     },
     {
       title: "Estamos quase chegando ao ninho!",
       body: "A próxima pista está onde vocês se sentam para fazer as refeições.",
-      art: { file: "pista-07", x: 10, y: 180, w: 346, h: 152 },
+      art: { file: "pista-07", x: 0, y: 178, w: 364, h: 158 },
     },
     {
       title: "VOCÊ ENCONTROU O OVO PERDIDO!",
@@ -95,7 +95,7 @@ export const dinossauros: EditorialKit = {
         label: "DESAFIO FINAL",
         text: "Façam juntos a Dança dos Dinossauros por 10 segundos. Depois, procurem o Guardião da Missão. Ele tem uma surpresa esperando por vocês!",
       },
-      art: { file: "pista-08", x: 262, y: 150, w: 168, h: 182 },
+      art: { file: "pista-08", x: 268, y: 0, w: 166, h: 336 },
     },
   ],
   certificate: {

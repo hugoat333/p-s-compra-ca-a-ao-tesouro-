@@ -3,7 +3,8 @@ import path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { EditorialKit } from "../../editorial/types";
-import { certificatePage, cluesPage, introPage, type Fonts } from "./pages";
+import type { Fonts } from "./fonts";
+import { certificatePageJurassic, cluesPageJurassic, introPageJurassic } from "./jurassic";
 import { RasterBook, type RasterUse } from "./raster";
 
 export interface EditorialResult {
@@ -31,10 +32,10 @@ export async function buildEditorialPdf(o: {
   const crops = [...o.kit.intro.cast, ...o.kit.clues.map((c) => c.art), ...o.kit.certificate.art];
   await art.preload(crops.map((c) => c.file));
 
-  introPage(doc, o.kit, o.childName, fonts, art);
-  cluesPage(doc, o.kit, 1, fonts, art);
-  cluesPage(doc, o.kit, 5, fonts, art);
-  certificatePage(doc, o.kit, o.childName, fonts, art);
+  introPageJurassic(doc, o.kit, o.childName, fonts, art);
+  cluesPageJurassic(doc, o.kit, 1, fonts, art);
+  cluesPageJurassic(doc, o.kit, 5, fonts, art);
+  certificatePageJurassic(doc, o.kit, o.childName, fonts, art);
   await art.finalize();
   return { doc, rasters: art.uses, filesRead: art.filesRead };
 }
