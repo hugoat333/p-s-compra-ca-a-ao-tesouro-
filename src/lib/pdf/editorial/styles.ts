@@ -120,12 +120,14 @@ const espaco: ThemeStyle = {
       xMark(c.page, b.x + b.w - 22, y + 4, 1.1, hex("#c2410c"));
     },
     row(c, b) {
+      // 5 pegadas de bota de astronauta (desafio dos 5 passos em câmera lenta)
+      const sole = hex("#8f9be0");
       for (let i = 0; i < 5; i++) {
-        const x = b.x + 8 + i * ((b.w - 16) / 4);
-        const y = b.y + b.h / 2 + Math.sin(i * 1.3) * 1.5;
-        circle(c.page, x, y, 2.6, { fill: hex("#c9c4bd"), stroke: hex("#8a857f"), strokeW: 0.2 });
-        circle(c.page, x - 0.8, y - 0.5, 0.7, { fill: hex("#a8a39c") });
-        circle(c.page, x + 0.9, y + 0.6, 0.5, { fill: hex("#a8a39c") });
+        const x = b.x + 9 + i * ((b.w - 18) / 4);
+        const y = b.y + b.h / 2 + (i % 2 ? -1.6 : 1.6);
+        c.page.drawEllipse({ ...pt(c.page, x - 1.2, y), xScale: mm(2.1), yScale: mm(1.3), color: color(sole) });
+        c.page.drawEllipse({ ...pt(c.page, x + 1.8, y), xScale: mm(1), yScale: mm(1.1), color: color(sole) });
+        for (let k = 0; k < 3; k++) c.page.drawLine({ start: pt(c.page, x - 2.6 + k * 1.2, y - 0.9), end: pt(c.page, x - 2.6 + k * 1.2, y + 0.9), thickness: mm(0.3), color: color(hex("#f2f4ff")) });
       }
     },
     burst(c, sc) {
@@ -173,6 +175,8 @@ const espaco: ThemeStyle = {
   },
   final: { frame: hex("#f5b82e"), frameDark: hex("#9a6a0a"), rays: hex("#ffd56b"), band: hex("#0e1440") },
   progress: hex("#6c4ce0"),
+  // Texto com prioridade: títulos e instruções maiores; a ilustração ocupa o espaço restante.
+  type: { titleMax: 19, bodyMax: 13.5, bodyMaxH: 34, chMax: 10.8, chMin: 9, sceneMin: 20 },
 };
 
 // ═══════════════════════════ FUTEBOL ═══════════════════════════

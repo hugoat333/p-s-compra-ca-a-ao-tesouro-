@@ -52,7 +52,21 @@ export interface ThemeStyle {
   };
   final: { frame: RGB; frameDark: RGB; rays: RGB; band: RGB };
   progress: RGB;
+  /** Tipografia dos cards (padrão: valores originais). */
+  type?: Partial<CardType>;
 }
+
+export interface CardType {
+  titleMax: number;
+  bodyMax: number;
+  bodyMaxH: number;
+  chMax: number;
+  chMin: number;
+  /** Altura mínima reservada para a ilustração (mm); o texto tem prioridade sobre o resto. */
+  sceneMin: number;
+}
+const DEFAULT_TYPE: CardType = { titleMax: 17.5, bodyMax: 12, bodyMaxH: 26, chMax: 9.6, chMin: 7.6, sceneMin: 18 };
+const ty = (c: SCtx): CardType => ({ ...DEFAULT_TYPE, ...c.st.type });
 
 export const CARD = { w: 92, h: 130 };
 
@@ -168,7 +182,12 @@ interface ChStyle {
 }
 const CH_DEFAULT: ChStyle = { max: 9.6, min: 7.6 };
 const CH_FINAL: ChStyle = { max: 10.8, min: 10, light: true };
-const chText = (c: SCtx, text: string, w: number, st: ChStyle) => fit(c.fonts.bold, text, w - 7, 45, { max: st.max, min: st.min, leading: 1.24 });
+const chText = (c: SCtx, text: string, w: number, st: ChStyle) => {
+  const t = ty(c);
+  const max = st.light ? st.max : t.chMax;
+  const min = st.light ? st.min : t.chMin;
+  return fit(c.fonts.bold, text, w - 7, 45, { max, min, leading: 1.24 });
+};
 const mChallenge = (c: SCtx, text: string, w: number, st: ChStyle = CH_DEFAULT) => chText(c, text, w, st).height + 10.5;
 
 function challenge(c: SCtx, label: string, text: string, b: Box, seed: number, final = false): number {
@@ -243,17 +262,19 @@ function storyCard(kind: "start" | "rest" | "trail", align: "left" | "right"): C
     c.st.watermark(c, align === "left" ? o.x + 78 : o.x + 14, o.y + 64, 7, -20);
     header(c, o, clue.__n, align);
     const top = o.y + 28.5;
-    const t = mTitle(c, clue.title, inner.w, 17.5);
-    const bd = mBody(c, clue.body, inner.w, 12);
-    const scH = RasterBook.maxSize(clue.art).h;
+    const T = ty(c);
+    const t = mTitle(c, clue.title, inner.w, T.titleMax, 20);
+    const bd = mBody(c, clue.body, inner.w, T.bodyMax, T.bodyMaxH);
     let y = top;
     dTitle(c, t, inner.x, y, inner.w);
-    y += t.height + 2.4;
+    y += t.height + 2.6;
     dBody(c, bd, inner.x, y, inner.w);
-    y += bd.height + 2.5;
-    const sceneTop = o.y + 111 - Math.min(scH, 30);
+    y += bd.height + 3;
+    const bottom = o.y + 111;
+    const scH = Math.max(T.sceneMin, Math.min(RasterBook.maxSize(clue.art).h, 30, bottom - y - 2));
+    const sceneTop = bottom - scH;
     if (sceneTop - y > 8) c.st.vignette[kind](c, { x: inner.x - 2, y, w: inner.w + 4, h: sceneTop - y - 1 });
-    const sc = scene(c, `pista-${clue.__n}`, clue.art, { x: inner.x - 2, y: sceneTop, w: inner.w + 4, h: Math.min(scH, 30) }, seed + 3, "torn");
+    const sc = scene(c, `pista-${clue.__n}`, clue.art, { x: inner.x - 2, y: sceneTop, w: inner.w + 4, h: scH }, seed + 3, "torn");
     c.st.vignette.accents(c, sc, seed + 4);
     finish(c, o, b, seed + 5);
   };
@@ -264,8 +285,9 @@ const card2: CardFn = (c, o, clue, seed) => {
   const b = base(c, o, seed, [4, 4.5]);
   const inner = { x: b.x + 5.5, w: b.w - 11 };
   header(c, o, 2, "right");
-  const t = mTitle(c, clue.title, inner.w, 17.5);
-  const bd = mBody(c, clue.body, inner.w, 12);
+  const T = ty(c);
+  const t = mTitle(c, clue.title, inner.w, T.titleMax, 20);
+  const bd = mBody(c, clue.body, inner.w, T.bodyMax, T.bodyMaxH);
   const chH = clue.challenge ? mChallenge(c, clue.challenge.text, inner.w) : 0;
   const chY = o.y + 119 - chH;
   let y = o.y + 28.5;
@@ -273,12 +295,13 @@ const card2: CardFn = (c, o, clue, seed) => {
   y += t.height + 2.4;
   dBody(c, bd, inner.x, y, inner.w);
   y += bd.height;
-  const rowH = 8;
-  const scH = Math.min(RasterBook.maxSize(clue.art).h, chY - 6 - rowH - y - 3);
+  const free = chY - 6 - y - 3;
+  const rowH = free - T.sceneMin >= 10 ? 8 : 0;
+  const scH = Math.max(T.sceneMin, Math.min(RasterBook.maxSize(clue.art).h, free - rowH));
   const sceneY = y + Math.max(2, (chY - 4 - rowH - y - scH) / 2);
   const sc = scene(c, "pista-2", clue.art, { x: inner.x - 2, y: sceneY, w: inner.w + 4, h: scH }, seed + 3, "torn");
   c.st.vignette.accents(c, sc, seed + 4);
-  c.st.vignette.row(c, { x: inner.x, y: chY - 4.5 - rowH, w: inner.w, h: rowH });
+  if (rowH) c.st.vignette.row(c, { x: inner.x, y: chY - 4.5 - rowH, w: inner.w, h: rowH });
   if (clue.challenge) challenge(c, clue.challenge.label, clue.challenge.text, { x: inner.x, y: chY, w: inner.w, h: 0 }, seed + 5);
   finish(c, o, b, seed + 6);
 };
@@ -288,8 +311,9 @@ const card4: CardFn = (c, o, clue, seed) => {
   const b = base(c, o, seed, [4, 4.5]);
   const inner = { x: b.x + 5.5, w: b.w - 11 };
   header(c, o, 4, "right");
-  const t = mTitle(c, clue.title, inner.w, 17.5);
-  const bd = mBody(c, clue.body, inner.w, 12);
+  const T = ty(c);
+  const t = mTitle(c, clue.title, inner.w, T.titleMax, 20);
+  const bd = mBody(c, clue.body, inner.w, T.bodyMax, T.bodyMaxH);
   const chH = clue.challenge ? mChallenge(c, clue.challenge.text, inner.w) : 0;
   const chY = o.y + 119 - chH;
   let y = o.y + 28.5;
@@ -297,7 +321,7 @@ const card4: CardFn = (c, o, clue, seed) => {
   y += t.height + 2.4;
   dBody(c, bd, inner.x, y, inner.w);
   y += bd.height;
-  const scH = Math.min(RasterBook.maxSize(clue.art).h, chY - 8 - y);
+  const scH = Math.max(T.sceneMin, Math.min(RasterBook.maxSize(clue.art).h, chY - 8 - y));
   const sceneY = y + Math.max(3, (chY - 6 - y - scH) / 2);
   const sc = scene(c, "pista-4", clue.art, { x: inner.x + 4, y: sceneY, w: inner.w - 8, h: scH }, seed + 3, "torn");
   c.st.vignette.burst(c, sc);
@@ -310,8 +334,9 @@ const card6: CardFn = (c, o, clue, seed) => {
   const b = base(c, o, seed, [4, 4.5]);
   const inner = { x: b.x + 5.5, w: b.w - 11 };
   header(c, o, 6, "right");
-  const t = mTitle(c, clue.title, inner.w, 17.5);
-  const bd = mBody(c, clue.body, inner.w, 12);
+  const T = ty(c);
+  const t = mTitle(c, clue.title, inner.w, T.titleMax, 20);
+  const bd = mBody(c, clue.body, inner.w, T.bodyMax, T.bodyMaxH);
   const chH = clue.challenge ? mChallenge(c, clue.challenge.text, inner.w) : 0;
   const chY = o.y + 119 - chH;
   let y = o.y + 28.5;
@@ -319,7 +344,7 @@ const card6: CardFn = (c, o, clue, seed) => {
   y += t.height + 2.4;
   dBody(c, bd, inner.x, y, inner.w);
   y += bd.height;
-  const rowH = Math.min(31, chY - 7 - y);
+  const rowH = Math.max(T.sceneMin, Math.min(31, chY - 7 - y));
   const rowY = y + Math.max(2, (chY - 5 - y - rowH) / 2);
   scene(c, "pista-6", clue.art, { x: inner.x, y: rowY, w: 38, h: rowH }, seed + 3, "blob");
   c.st.vignette.pair(c, { x: inner.x + 40, y: rowY, w: inner.w - 40, h: rowH });
@@ -333,15 +358,16 @@ const card7: CardFn = (c, o, clue, seed) => {
   const b = base(c, o, seed, [4.5, 4.5]);
   const inner = { x: b.x + 5.5, w: b.w - 11 };
   header(c, o, 7, "left");
-  const t = mTitle(c, clue.title, inner.w, 18);
-  const bd = mBody(c, clue.body, inner.w, 12.5);
+  const T = ty(c);
+  const t = mTitle(c, clue.title, inner.w, T.titleMax + 0.5, 20);
+  const bd = mBody(c, clue.body, inner.w, T.bodyMax + 0.5, T.bodyMaxH);
   let y = o.y + 28.5;
   dTitle(c, t, inner.x, y, inner.w);
   y += t.height + 2.4;
   dBody(c, bd, inner.x, y, inner.w);
   y += bd.height + 3;
   const mapY = o.y + 110;
-  const scH = Math.min(RasterBook.maxSize(clue.art).h, mapY - 9 - y);
+  const scH = Math.max(T.sceneMin, Math.min(RasterBook.maxSize(clue.art).h, mapY - 9 - y));
   const sceneY = y + Math.max(0, (mapY - 9 - y - scH) / 2);
   const sc = scene(c, "pista-7", clue.art, { x: inner.x - 3, y: sceneY, w: inner.w + 6, h: scH }, seed + 3, "torn");
   c.st.vignette.accents(c, sc, seed + 4);
