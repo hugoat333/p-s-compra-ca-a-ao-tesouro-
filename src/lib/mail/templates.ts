@@ -27,7 +27,7 @@ export function adventureReadyEmail(p: { to: string; childName: string; themeLab
 <p style="margin:0 0 12px">Tema escolhido:<br><strong>${esc(p.themeLabel)}</strong></p>
 <p style="margin:0 0 12px">Clique abaixo para acessar o arquivo:</p>`,
     { href: p.link, label: "ACESSAR MINHA AVENTURA" },
-    "Prepare o presente, imprima as pistas e deixe a aventura começar!",
+    "Prepare o presente, imprima as pistas e deixe a aventura começar!<br><br><span style=\"font-size:13px;color:#6b7280\">Na mesma página você também baixa o guia de preparação, com o lugar de cada pista.</span>",
   );
   const text = `Olá!
 

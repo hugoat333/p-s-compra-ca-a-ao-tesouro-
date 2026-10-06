@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/personalization": ["./kits/**/*", "./assets/fonts/**/*"],
     "/api/download/[token]": ["./kits/**/*", "./assets/fonts/**/*"],
+    "/api/guia/[token]": ["./assets/fonts/**/*"],
   },
   serverExternalPackages: ["pg", "nodemailer"],
   async headers() {

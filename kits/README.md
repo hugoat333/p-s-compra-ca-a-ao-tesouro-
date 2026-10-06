@@ -32,11 +32,15 @@ introdução/certificado ~2250x3000 px, pistas ~1050x1550 px) mantendo os mesmos
 Tamanho: o deploy serverless da Vercel tem limite de ~250 MB por função. Use 150–200 DPI (pistas ~1200×1700 px)
 e PNG otimizado ou JPEG de qualidade 90. 60 arquivos de 1–2 MB cabem com folga.
 
-## Composição editorial "expedição jurássica" — Dinossauros (aprovada)
+## Composição editorial (os 6 temas)
 
-O tema `dinossauros` é montado pelo PDF: selva, pergaminho com textura, placas, selos, bússola, trilhas, pedras, ovos,
-medalha e toda a tipografia em vetor (`src/lib/pdf/editorial/jurassic.ts`). As artes entram só como ilustrações
-recortadas e integradas por máscara orgânica, **nunca maiores que 150 DPI efetivos** no papel
-(recortes em `src/lib/editorial/dinossauros.ts`). Cada pista tem composição própria; a pista 8 tem tratamento final.
-`npm run kits:check` mede cada ilustração no tamanho impresso (erro abaixo de 120 DPI, aviso entre 120 e 150).
-Os demais temas seguem no layout legado até serem produzidos no mesmo padrão.
+O PDF desenha em vetor o cenário, o papel, as placas, os selos, a medalha e toda a tipografia; as artes entram só como
+ilustrações recortadas, **nunca maiores que 150 DPI efetivos** no papel.
+
+- `src/lib/editorial/<tema>.ts`: textos revisados de cada tema, recortes das ilustrações e onde esconder cada pista.
+- Dinossauros: `src/lib/pdf/editorial/jurassic.ts` (direção aprovada, não alterar).
+- Espaço, Futebol, Princesas, Fadas, Sereias: motor `storybook.ts` + identidade de cada tema em `styles.ts`.
+- Guia do responsável: `src/lib/pdf/guide.ts` (rota `/api/guia/<token>`).
+
+`npm run kits:check` gera os 6 PDFs e mede cada ilustração no tamanho impresso (erro abaixo de 120 DPI).
+`npm run pdf:sample -- <tema> "Nome"` e `npx tsx scripts/sample-guide.ts <tema> "Nome"` geram amostras em `output/`.

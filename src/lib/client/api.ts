@@ -28,3 +28,7 @@ export const api = {
 export function downloadUrl(token: string) {
   return `/api/download/${encodeURIComponent(token)}`;
 }
+
+export function guideUrl(token: string) {
+  return `/api/guia/${encodeURIComponent(token)}`;
+}

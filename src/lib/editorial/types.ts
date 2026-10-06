@@ -36,6 +36,8 @@ export type Icon = "footprint";
 
 export interface ClueContent {
   title: string;
+  /** Onde o responsável esconde ESTA pista (guia de preparação). */
+  hideAt: string;
   /** Título em caixa alta e cor de alerta (ex.: pista final). */
   titleStyle?: "normal" | "final";
   body: string;
@@ -44,6 +46,10 @@ export interface ClueContent {
 }
 
 export interface EditorialKit {
+  /** Nome da missão (guia do responsável). */
+  missionName: string;
+  /** O que a criança encontra no final, com o Guardião da Missão. */
+  treasure: string;
   palette: Palette;
   icon: Icon;
   intro: {

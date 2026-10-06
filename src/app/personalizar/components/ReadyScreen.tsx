@@ -1,6 +1,6 @@
 import type { OrderView } from "@/lib/orderView";
 import { THEMES } from "@/lib/themes";
-import { downloadUrl } from "@/lib/client/api";
+import { downloadUrl, guideUrl } from "@/lib/client/api";
 import s from "../personalizar.module.css";
 
 export default function ReadyScreen({ order, token, fresh }: { order: OrderView; token: string; fresh: boolean }) {
@@ -29,6 +29,9 @@ export default function ReadyScreen({ order, token, fresh }: { order: OrderView;
         BAIXAR MINHA AVENTURA
       </a>
       <p className={s.sectionText}>Imprima o arquivo, recorte as pistas e esconda cada uma no local indicado.</p>
+      <a className={s.secondaryLink} href={guideUrl(token)} download>
+        Baixar guia de preparação (para o adulto)
+      </a>
       {order.emailSent && <p className={s.emailNote}>Também enviamos uma cópia para o e-mail usado na compra.</p>}
     </section>
   );

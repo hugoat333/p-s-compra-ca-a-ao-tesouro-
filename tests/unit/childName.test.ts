@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateChildName, pdfFilename, CHILD_NAME_MAX_LENGTH } from "@/lib/childName";
-import { fitText } from "@/lib/pdf/text";
+import { fit } from "@/lib/pdf/editorial/text";
 
 describe("nome da criança", () => {
   it("10. nome vazio é rejeitado", () => {
@@ -28,15 +28,13 @@ describe("nome da criança", () => {
   });
 });
 
-describe("fitText", () => {
+describe("ajuste de texto (fit)", () => {
   const font = { widthOfTextAtSize: (s: string, size: number) => s.length * size * 0.5 } as never;
-  it("reduz a fonte, quebra em 2 linhas e respeita o mínimo", () => {
-    expect(fitText(font, "Miguel", { width: 300, height: 60 }, { maxSize: 40, minSize: 12 })).toMatchObject({ lines: ["Miguel"], size: 40 });
-    const two = fitText(font, "Maria Eduarda Santos", { width: 100, height: 80 }, { maxSize: 40, minSize: 12 });
-    expect(two.lines).toHaveLength(2);
+  it("reduz a fonte e quebra linhas sem cortar", () => {
+    expect(fit(font, "Miguel", 120, 20, { max: 40, min: 12, maxLines: 2 }).lines).toEqual(["Miguel"]);
+    const two = fit(font, "Maria Eduarda dos Santos", 40, 30, { max: 40, min: 12, maxLines: 2 });
+    expect(two.lines.length).toBeLessThanOrEqual(2);
+    expect(two.lines.join(" ")).toBe("Maria Eduarda dos Santos");
     expect(two.size).toBeGreaterThanOrEqual(12);
-    const cut = fitText(font, "Supercalifragilistico", { width: 40, height: 20 }, { maxSize: 40, minSize: 12 });
-    expect(cut.size).toBe(12);
-    expect(cut.lines[0].endsWith("…")).toBe(true);
   });
 });

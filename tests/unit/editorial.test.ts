@@ -32,20 +32,36 @@ describe.each(editorialThemes)("kit editorial: %s", (theme) => {
     expect(kit.clues).toHaveLength(8);
   });
 
-  if (theme === "dinossauros") {
-    it("desafios batem exatamente com o roteiro original das artes", async () => {
-      // Roteiro das artes originais (kits/dinossauros/pista-0N.png).
-      const roteiro = [null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO FINAL"];
-      expect(kit.clues.map((c) => c.challenge?.label ?? null)).toEqual(roteiro);
-      const { bytes } = await generateAdventurePdf({ theme, childName: "Miguel", kitsDir: KITS, fontsDir: FONTS_DIR });
-      const t = await pageTexts(bytes);
-      const count = (s: string, needle: string) => s.split(needle).length - 1;
-      expect(count(t[1], "DESAFIO EM DUPLA")).toBe(2); // pistas 2 e 4
-      expect(count(t[1], "DESAFIO FINAL")).toBe(0);
-      expect(count(t[2], "DESAFIO EM DUPLA")).toBe(1); // pista 6
-      expect(count(t[2], "DESAFIO FINAL")).toBe(1); // pista 8
-    }, 60_000);
-  }
+  it("desafios batem com o roteiro original (2, 4 e 6 em dupla; 8 final)", async () => {
+    const roteiro = [null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO EM DUPLA", null, "DESAFIO FINAL"];
+    expect(kit.clues.map((c) => c.challenge?.label ?? null)).toEqual(roteiro);
+    const { bytes } = await generateAdventurePdf({ theme, childName: "Miguel", kitsDir: KITS, fontsDir: FONTS_DIR });
+    const t = await pageTexts(bytes);
+    const count = (s: string, needle: string) => s.split(needle).length - 1;
+    expect(count(t[1], "DESAFIO EM DUPLA")).toBe(2);
+    expect(count(t[1], "DESAFIO FINAL")).toBe(0);
+    expect(count(t[2], "DESAFIO EM DUPLA")).toBe(1);
+    expect(count(t[2], "DESAFIO FINAL")).toBe(1);
+  }, 60_000);
+
+  it("cada pista aponta para o local onde a próxima está escondida (coerência do roteiro + guia)", () => {
+    const KEYS: [RegExp, RegExp][] = [
+      [/geladeira/i, /alimentos/i],
+      [/lavanderia/i, /roupas/i],
+      [/cama/i, /dorm|sonhos|descansa e/i],
+      [/sofá/i, /sentar|macio/i],
+      [/espelho/i, /rosto|reflexo|diante dele|olhar diretamente|igual a você|objeto (mágico|brilhante)/i],
+      [/sapatos/i, /pés|sapatos/i],
+      [/mesa/i, /refeições/i],
+    ];
+    for (let n = 2; n <= 8; n++) {
+      const [where, hint] = KEYS[n - 2];
+      expect(kit.clues[n - 1].hideAt, `pista ${n}`).toMatch(where);
+      const prev = kit.clues[n - 2];
+      expect(`${prev.title} ${prev.body}`, `pista ${n - 1} deve indicar o local da pista ${n}`).toMatch(hint);
+    }
+    expect(kit.clues[0].hideAt).toMatch(/introdução/);
+  });
 
   for (const name of ["Ana", "Miguel", "Maria Eduarda", "João Pedro"]) {
     it(`PDF com "${name}": 4 páginas, texto vetorial, nome só na introdução e no certificado`, async () => {
@@ -95,4 +111,20 @@ describe.each(editorialThemes)("kit editorial: %s", (theme) => {
       });
     }, 60_000);
   }
+});
+
+describe("guia de preparação", () => {
+  it.each([...THEME_IDS])("%s: guia lista as 8 pistas nos locais do roteiro e o Guardião", async (theme) => {
+    const { generateGuidePdf, guideRows } = await import("@/lib/pdf/guide");
+    const kit = editorialKit(theme);
+    const rows = guideRows(theme);
+    expect(rows).toHaveLength(9);
+    kit.clues.forEach((c, i) => expect(rows[i]).toEqual({ label: `Pista ${i + 1}`, where: c.hideAt }));
+    const bytes = await generateGuidePdf({ theme, childName: "Maria Eduarda", fontsDir: FONTS_DIR });
+    const t = (await pageTexts(bytes))[0];
+    expect(t).toContain("Maria Eduarda");
+    expect(t).toContain(kit.missionName);
+    for (const c of kit.clues) expect(t).toContain(norm(c.hideAt));
+    expect(t).toContain("Guardião da Missão");
+  });
 });

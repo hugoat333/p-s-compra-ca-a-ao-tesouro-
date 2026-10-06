@@ -15,7 +15,8 @@ export interface Box {
 }
 
 export const color = (c: RGB) => rgb(c[0], c[1], c[2]);
-export const shade = (c: RGB, f: number): RGB => [c[0] * f, c[1] * f, c[2] * f];
+const clamp = (v: number) => Math.max(0, Math.min(1, v));
+export const shade = (c: RGB, f: number): RGB => [clamp(c[0] * f), clamp(c[1] * f), clamp(c[2] * f)];
 export const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
 /** Converte um ponto em mm (topo-esquerda) para pontos PDF (base-esquerda). */

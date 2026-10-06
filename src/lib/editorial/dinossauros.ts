@@ -4,6 +4,7 @@
  * Recortes: maior área de ilustração SEM texto rasterizado de cada arte (conferidos visualmente).
  */
 import type { EditorialKit } from "./types";
+import { HIDE_SPOTS as H } from "./hideSpots";
 
 const rgb = (hex: string): [number, number, number] => [
   parseInt(hex.slice(1, 3), 16) / 255,
@@ -12,6 +13,8 @@ const rgb = (hex: string): [number, number, number] => [
 ];
 
 export const dinossauros: EditorialKit = {
+  missionName: "A Expedição do Ovo Perdido",
+  treasure: "o Ovo Perdido",
   icon: "footprint",
   palette: {
     page: rgb("#fbf3dc"),
@@ -51,44 +54,52 @@ export const dinossauros: EditorialKit = {
   clues: [
     {
       title: "Encontramos as primeiras pegadas!",
+      hideAt: H[0],
       body: "Um dinossauro faminto passou por aqui. A próxima pista está no lugar onde os alimentos ficam bem fresquinhos.",
       art: { file: "pista-01", x: 0, y: 236, w: 305, h: 172 },
     },
     {
       title: "Cuidado, exploradores!",
+      hideAt: H[1],
       body: "As pegadas estão cobertas de lama. Procure o lugar onde as roupas entram sujas e saem limpinhas.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Caminhem juntos por 5 passos como um T-Rex!" },
       art: { file: "pista-02", x: 0, y: 196, w: 295, h: 110 },
     },
     {
       title: "O caminho ficou silencioso...",
+      hideAt: H[2],
       body: "Parece que o dinossauro resolveu descansar. A próxima pista está no lugar onde você dorme e recupera suas energias.",
       art: { file: "pista-03", x: 0, y: 248, w: 282, h: 162 },
     },
     {
       title: "O ovo está cada vez mais perto!",
+      hideAt: H[3],
       body: "Um enorme dinossauro passou pelo lugar onde a família costuma sentar para descansar.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Inventem juntos o rugido secreto da equipe!" },
       art: { file: "pista-04", x: 0, y: 204, w: 290, h: 124 },
     },
     {
       title: "Encontramos uma pista estranha...",
+      hideAt: H[4],
       body: "Para continuar, procure um lugar onde você consegue ver um explorador exatamente igual a você.",
       art: { file: "pista-05", x: 0, y: 208, w: 365, h: 128 },
     },
     {
       title: "Pegadas de dinossauro!",
+      hideAt: H[5],
       body: "Agora procure onde ficam guardados os pares que você coloca nos pés para sair de casa.",
       challenge: { label: "DESAFIO EM DUPLA", text: "Comparem suas pegadas e descubram quem tem o maior pé!" },
       art: { file: "pista-06", x: 0, y: 176, w: 172, h: 160 },
     },
     {
       title: "Estamos quase chegando ao ninho!",
+      hideAt: H[6],
       body: "A próxima pista está onde vocês se sentam para fazer as refeições.",
       art: { file: "pista-07", x: 0, y: 178, w: 364, h: 158 },
     },
     {
       title: "VOCÊ ENCONTROU O OVO PERDIDO!",
+      hideAt: H[7],
       titleStyle: "final",
       body: "A expedição foi um sucesso.",
       challenge: {

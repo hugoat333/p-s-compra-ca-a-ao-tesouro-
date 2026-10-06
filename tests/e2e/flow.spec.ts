@@ -29,7 +29,9 @@ async function noHorizontalScroll(page: Page) {
 const CASES = [
   { theme: "dinossauros", label: "Dinossauros", name: "Miguel", file: "o-tesouro-de-miguel.pdf" },
   { theme: "espaco", label: "Espaço", name: "João Pedro", file: "o-tesouro-de-joao-pedro.pdf" },
-  { theme: "princesas", label: "Princesas", name: "Ana Clara", file: "o-tesouro-de-ana-clara.pdf" },
+  { theme: "futebol", label: "Futebol", name: "Ana", file: "o-tesouro-de-ana.pdf" },
+  { theme: "princesas", label: "Princesas", name: "Maria Eduarda", file: "o-tesouro-de-maria-eduarda.pdf" },
+  { theme: "fadas", label: "Fadas", name: "Ana Clara", file: "o-tesouro-de-ana-clara.pdf" },
   { theme: "sereias", label: "Sereias", name: "Lívia", file: "o-tesouro-de-livia.pdf" },
 ];
 
@@ -79,6 +81,13 @@ for (const c of CASES) {
     const pdf = await PDFDocument.load(fs.readFileSync(pdfPath));
     expect(pdf.getPageCount()).toBe(4);
     expect(pdf.getTitle()).toBe(`O Tesouro de ${c.name}`);
+
+    // Guia do responsável (PDF de 1 página do mesmo tema).
+    const [guide] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("link", { name: /guia de preparação/i }).click(),
+    ]);
+    expect(guide.suggestedFilename()).toBe(c.file.replace("o-tesouro-de-", "guia-do-responsavel-"));
 
     // Refresh: não volta ao formulário.
     await page.reload();

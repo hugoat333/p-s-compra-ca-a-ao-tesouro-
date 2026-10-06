@@ -10,7 +10,8 @@ Checkout aprovado ──► POST /api/webhooks/checkout  (registra o pedido, ide
                  ├─ cliente informa o e-mail da compra → backend confirma payment_status = paid
                  ├─ escolhe tema + nome → POST /api/personalization
                  ├─ servidor monta PDF: introdução (nome) + 8 pistas fixas + certificado (nome)
-                 └─ GET /api/download/<token>  (token opaco; PDF regenerado sob demanda)
+                 ├─ GET /api/download/<token>  (token opaco; PDF regenerado sob demanda)
+                 └─ GET /api/guia/<token>      (guia de preparação do responsável, 1 página)
 ```
 
 ## Configuração
