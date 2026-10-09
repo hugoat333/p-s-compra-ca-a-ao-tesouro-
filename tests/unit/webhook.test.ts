@@ -153,3 +153,39 @@ for (const factory of repoFactories()) {
     });
   });
 }
+
+describe("webhook sem CHECKOUT_PRODUCT_ID (primeiro deploy)", () => {
+  it("aceita requisição autenticada, não cria pedido e não libera nada", async () => {
+    const { MemoryOrderRepository } = await import("@/lib/db/memory");
+    const repo = new MemoryOrderRepository();
+    setTestEnv();
+    delete process.env.CHECKOUT_PRODUCT_ID;
+    setOrderRepositoryForTests(repo);
+    try {
+      const res = await POST(webhookRequest(paidPayload({ paymentId: "disc_1" })));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true, action: "ignored", reason: "product_not_configured" });
+      expect(repo.rows).toHaveLength(0);
+      // secret continua obrigatório
+      expect((await POST(webhookRequest(paidPayload(), { authorization: "Bearer errado" }))).status).toBe(401);
+      expect((await POST(webhookRequest("{x"))).status).toBe(400);
+      // lookup também não libera
+      const { POST: lookup } = await import("@/app/api/orders/lookup/route");
+      const { jsonRequest } = await import("./helpers");
+      expect((await lookup(jsonRequest("/api/orders/lookup", { email: "ana@example.com" }, "10.55.0.1"))).status).toBe(404);
+    } finally {
+      setOrderRepositoryForTests(undefined);
+      setTestEnv();
+    }
+  });
+
+  it("sem secret o endpoint fica fechado", async () => {
+    setTestEnv();
+    delete process.env.CHECKOUT_WEBHOOK_SECRET;
+    try {
+      expect((await POST(webhookRequest(paidPayload()))).status).toBe(500);
+    } finally {
+      setTestEnv();
+    }
+  });
+});

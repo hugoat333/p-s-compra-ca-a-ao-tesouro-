@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const cfg = loadConfig();
-  if (!cfg.checkoutWebhookSecret || !cfg.checkoutProductId) {
-    log.error("webhook.misconfigured", { hasSecret: !!cfg.checkoutWebhookSecret, hasProductId: !!cfg.checkoutProductId });
+  // Sem secret o endpoint fica fechado (fail-closed): nenhuma requisição é aceita.
+  if (!cfg.checkoutWebhookSecret) {
+    log.error("webhook.misconfigured", { hasSecret: false });
     return json({ ok: false }, 500);
   }
   if (!isValidWebhookSecret(req.headers, cfg.checkoutWebhookSecret)) {
@@ -28,6 +29,18 @@ export async function POST(req: Request) {
   } catch (err) {
     log.warn("webhook.invalid_payload", { reason: err instanceof PayloadError ? err.message : "json inválido" });
     return json({ ok: false, error: "invalid_payload" }, 400);
+  }
+
+  // Modo de descoberta: CHECKOUT_PRODUCT_ID ainda não configurado.
+  // O evento autenticado é registrado no log (IDs e tipos dos produtos) e NADA é gravado ou liberado.
+  if (!cfg.checkoutProductId) {
+    log.warn("webhook.product_id_not_configured", {
+      event: normalized.event,
+      paymentId: normalized.paymentId,
+      paymentStatus: normalized.paymentStatus,
+      products: normalized.products.map((p) => ({ id: p.id, type: p.type })),
+    });
+    return json({ ok: true, action: "ignored", reason: "product_not_configured" });
   }
 
   try {

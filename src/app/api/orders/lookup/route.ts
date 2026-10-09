@@ -34,7 +34,11 @@ export async function POST(req: Request) {
 
   try {
     const { checkoutProductId } = loadConfig();
-    if (!checkoutProductId) throw new Error("CHECKOUT_PRODUCT_ID não configurado");
+    if (!checkoutProductId) {
+      // Sem produto configurado nenhuma compra pode ser liberada.
+      log.warn("lookup.product_id_not_configured");
+      return json({ ok: false, code: "not_found" }, 404);
+    }
     const order = await getOrderRepository().findPaidForEmail(email, checkoutProductId);
     if (!order || !isDeliverable(order, checkoutProductId)) {
       log.info("lookup.not_found", { customerEmail: maskEmail(email) });

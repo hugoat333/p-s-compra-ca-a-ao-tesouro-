@@ -14,6 +14,17 @@ Checkout aprovado ──► POST /api/webhooks/checkout  (registra o pedido, ide
                  └─ GET /api/guia/<token>      (guia de preparação do responsável, 1 página)
 ```
 
+## Primeiro deploy (sem CHECKOUT_PRODUCT_ID)
+
+1. Configure na Vercel `APP_URL`, `DATABASE_URL` e `CHECKOUT_WEBHOOK_SECRET` (deixe `CHECKOUT_PRODUCT_ID` vazio) e rode `npm run db:migrate`.
+2. Cadastre o webhook na ggCheckout apontando para `https://SEU_DOMINIO/api/webhooks/checkout` com o mesmo secret.
+3. Faça uma compra de teste. O endpoint responde 200 `product_not_configured`, não grava nada e registra nos logs da Vercel
+   a linha `webhook.product_id_not_configured` com `products: [{ id, type }]`. O ID também aparece no histórico do webhook da ggCheckout.
+4. Copie o `id` do produto com `type: "main"` para `CHECKOUT_PRODUCT_ID` na Vercel e faça **Redeploy**.
+5. Repita a compra de teste: agora o pedido é criado e a personalização é liberada.
+
+Enquanto o ID estiver vazio, compras reais NÃO são registradas — não divulgue o link de venda antes do passo 4.
+
 ## Configuração
 
 1. `cp .env.example .env.local` e preencha (ver comentários no arquivo).
