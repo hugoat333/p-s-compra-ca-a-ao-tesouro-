@@ -5,7 +5,8 @@ import { isValidWebhookSecret } from "@/lib/checkout/auth";
 import { normalizeWebhook, PayloadError } from "@/lib/checkout/payload";
 import { processWebhook } from "@/lib/checkout/process";
 import { sendAccessEmail } from "@/lib/server/delivery";
-import { json, readJson, runAfter } from "@/lib/server/http";
+import { json, runAfter } from "@/lib/server/http";
+import { bodyShape, classifyInvalid, isTestEvent, parseBody } from "@/lib/checkout/verification";
 import { log, errorInfo } from "@/lib/server/log";
 
 export const runtime = "nodejs";
@@ -23,12 +24,34 @@ export async function POST(req: Request) {
     return json({ ok: false }, 401);
   }
 
+  const text = await req.text();
+  if (text.length > 64 * 1024) {
+    log.warn("webhook.invalid_payload", { reason: "payload grande demais", bodyBytes: text.length });
+    return json({ ok: false, error: "invalid_payload" }, 400);
+  }
+  const parsed = parseBody(text);
+  const shape = bodyShape(parsed.ok ? parsed.body : undefined, text, req.headers.get("content-type"));
+
   let normalized;
   try {
-    normalized = normalizeWebhook(await readJson(req));
+    if (!parsed.ok) throw new PayloadError("json inválido");
+    normalized = normalizeWebhook(parsed.body);
   } catch (err) {
-    log.warn("webhook.invalid_payload", { reason: err instanceof PayloadError ? err.message : "json inválido" });
+    const reason = err instanceof PayloadError ? err.message : "json inválido";
+    const c = classifyInvalid(parsed.ok ? parsed.body : undefined, parsed.ok, reason);
+    if (c.kind === "verification") {
+      // Requisição autenticada de verificação/teste (ex.: cadastro do webhook na ggCheckout).
+      log.info("webhook.verification", { reason: c.reason, ...shape });
+      return json({ ok: true, action: "verification" });
+    }
+    log.warn("webhook.invalid_payload", { reason: c.reason, ...shape });
     return json({ ok: false, error: "invalid_payload" }, 400);
+  }
+
+  // Evento explicitamente de teste com payload completo: confirma sem gravar nada.
+  if (isTestEvent(normalized.event)) {
+    log.info("webhook.verification", { reason: "evento de teste", ...shape });
+    return json({ ok: true, action: "verification" });
   }
 
   // Modo de descoberta: CHECKOUT_PRODUCT_ID ainda não configurado.
@@ -60,4 +83,13 @@ export async function POST(req: Request) {
     log.error("webhook.processing_failed", { paymentId: normalized.paymentId, event: normalized.event, ...errorInfo(err) });
     return json({ ok: false }, 500);
   }
+}
+
+/** Algumas plataformas verificam a URL com GET/HEAD antes de salvar. Não expõe nada. */
+export function GET() {
+  return json({ ok: true, endpoint: "checkout-webhook" });
+}
+
+export function HEAD() {
+  return new Response(null, { status: 200 });
 }

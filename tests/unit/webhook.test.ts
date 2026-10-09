@@ -137,10 +137,11 @@ for (const factory of repoFactories()) {
       expect((await tokenOf("arr_1"))?.paymentStatus).toBe("paid");
     });
 
-    it("payload inválido retorna 400", async () => {
-      expect((await POST(webhookRequest("{nao é json"))).status).toBe(400);
-      expect((await POST(webhookRequest({ event: "pix.paid" }))).status).toBe(400);
-      expect((await POST(webhookRequest({ event: "pix.paid", payment: { status: "paid" }, product: { id: PRODUCT_ID } }))).status).toBe(400);
+    it("pagamento real malformado retorna 400; corpo sem pagamento é verificação (200)", async () => {
+      expect((await POST(webhookRequest({ event: "card.paid", payment: { id: "x1", status: "paid" } }))).status).toBe(400);
+      expect((await POST(webhookRequest("{nao é json"))).status).toBe(200);
+      expect((await POST(webhookRequest({ event: "pix.paid" }))).status).toBe(200);
+      expect(await tokenOf("x1")).toBeNull();
     });
 
     it("não armazena documento, IP nem código PIX", async () => {
@@ -168,7 +169,8 @@ describe("webhook sem CHECKOUT_PRODUCT_ID (primeiro deploy)", () => {
       expect(repo.rows).toHaveLength(0);
       // secret continua obrigatório
       expect((await POST(webhookRequest(paidPayload(), { authorization: "Bearer errado" }))).status).toBe(401);
-      expect((await POST(webhookRequest("{x"))).status).toBe(400);
+      expect((await POST(webhookRequest("{x"))).status).toBe(200); // verificação
+      expect(repo.rows).toHaveLength(0);
       // lookup também não libera
       const { POST: lookup } = await import("@/app/api/orders/lookup/route");
       const { jsonRequest } = await import("./helpers");
@@ -187,5 +189,103 @@ describe("webhook sem CHECKOUT_PRODUCT_ID (primeiro deploy)", () => {
     } finally {
       setTestEnv();
     }
+  });
+});
+
+describe("verificação do cadastro do webhook (ggCheckout)", () => {
+  const raw = (body: string, headers: Record<string, string> = { authorization: `Bearer ${SECRET}` }) =>
+    new Request("http://localhost/api/webhooks/checkout", { method: "POST", headers, body });
+
+  async function withRepo(fn: (repo: import("@/lib/db/memory").MemoryOrderRepository) => Promise<void>) {
+    const { MemoryOrderRepository } = await import("@/lib/db/memory");
+    const repo = new MemoryOrderRepository();
+    setTestEnv();
+    setOrderRepositoryForTests(repo);
+    try {
+      await fn(repo);
+    } finally {
+      setOrderRepositoryForTests(undefined);
+    }
+  }
+
+  const TESTS: [string, string][] = [
+    ["corpo vazio", ""],
+    ["JSON vazio", "{}"],
+    ["texto puro", "ping"],
+    ["form-urlencoded", "test=1"],
+    ["evento de teste", JSON.stringify({ event: "webhook.test" })],
+    ["evento test com amostra completa", JSON.stringify({ ...paidPayload({ paymentId: "sample_1" }), event: "test" })],
+    ["flag test", JSON.stringify({ test: true })],
+    ["amostra sem payment", JSON.stringify({ event: "pix.paid", customer: { name: "Teste" } })],
+    ["array", "[]"],
+  ];
+
+  for (const [name, body] of TESTS) {
+    it(`autenticado + ${name} → 200 verification, nada gravado`, async () => {
+      await withRepo(async (repo) => {
+        const res = await POST(raw(body));
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ ok: true, action: "verification" });
+        expect(repo.rows).toHaveLength(0);
+      });
+    });
+  }
+
+  it("verificação continua exigindo secret (sem secret ou errado → 401)", async () => {
+    await withRepo(async () => {
+      expect((await POST(raw("", {}))).status).toBe(401);
+      expect((await POST(raw("{}", { "x-secret": "errado" }))).status).toBe(401);
+    });
+  });
+
+  it("pagamento real malformado continua 400", async () => {
+    await withRepo(async (repo) => {
+      const body = JSON.stringify({ event: "pix.paid", payment: { id: "p_1", status: "paid" } }); // sem product
+      const res = await POST(raw(body));
+      expect(res.status).toBe(400);
+      expect(repo.rows).toHaveLength(0);
+    });
+  });
+
+  it("pagamento real válido continua criando pedido", async () => {
+    await withRepo(async (repo) => {
+      const res = await POST(raw(JSON.stringify(paidPayload({ paymentId: "real_1" }))));
+      expect(await res.json()).toMatchObject({ ok: true, action: "created" });
+      expect(repo.rows).toHaveLength(1);
+    });
+  });
+
+  it("verificação no modo de descoberta (sem CHECKOUT_PRODUCT_ID) também responde 200", async () => {
+    await withRepo(async (repo) => {
+      delete process.env.CHECKOUT_PRODUCT_ID;
+      expect((await POST(raw(""))).status).toBe(200);
+      expect(await (await POST(raw(JSON.stringify(paidPayload())))).json()).toMatchObject({ reason: "product_not_configured" });
+      expect(repo.rows).toHaveLength(0);
+      setTestEnv();
+    });
+  });
+
+  it("GET e HEAD respondem 200 sem dados", async () => {
+    const { GET, HEAD } = await import("@/app/api/webhooks/checkout/route");
+    expect(GET().status).toBe(200);
+    expect(HEAD().status).toBe(200);
+  });
+
+  it("log de diagnóstico não contém valores sensíveis", async () => {
+    const logs: string[] = [];
+    const orig = console.log;
+    console.log = (l: string) => logs.push(l);
+    try {
+      await withRepo(async () => {
+        await POST(raw(JSON.stringify({ hello: "segredo-valor", customer: { email: "x@y.com", document: "123" } })));
+      });
+    } finally {
+      console.log = orig;
+    }
+    const line = logs.join("\n");
+    expect(line).toContain("webhook.verification");
+    expect(line).not.toContain("segredo-valor");
+    expect(line).not.toContain("x@y.com");
+    expect(line).not.toContain(SECRET);
   });
 });
